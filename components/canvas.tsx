@@ -47,15 +47,22 @@ export default function Canvas() {
   };
 
   const calculatePhysics = (dt: number) => {
-    if (ballpos.current[0] > gameSize[0] || ballpos.current[0] < 0) {
-      ballvel.current[0] = 0.9 * -ballvel.current[0];
-      if (ballpos.current[0] > gameSize[0]) ballpos.current[0] -= 5;
-      if (ballpos.current[0] > 0) ballpos.current[0] += 5;
+    if (ballpos.current[0] > gameSize[0]) {
+      ballpos.current[0] -= 5;
+      ballvel.current[0] = -0.9 * Math.abs(ballvel.current[0]);
     }
-    if (ballpos.current[1] > gameSize[1] || ballpos.current[1] < 0) {
-      ballvel.current[1] = 0.9 * -ballvel.current[1];
-      if (ballpos.current[1] > gameSize[1]) ballpos.current[1] -= 5;
-      if (ballpos.current[1] > 0) ballpos.current[1] += 5;
+    if (ballpos.current[0] < 0) {
+      ballpos.current[0] += 5;
+      ballvel.current[0] = 0.9 * Math.abs(ballvel.current[0]);
+    }
+
+    if (ballpos.current[1] > gameSize[1]) {
+      ballpos.current[1] -= 5;
+      ballvel.current[1] = -0.9 * Math.abs(ballvel.current[1]);
+    }
+    if (ballpos.current[1] < 0) {
+      ballpos.current[1] += 5;
+      ballvel.current[1] = 0.9 * Math.abs(ballvel.current[1]);
     }
 
     if (ballpos.current[0] == NaN || ballpos.current[1] == NaN) {
@@ -63,6 +70,9 @@ export default function Canvas() {
       ballvel.current = [0, 0];
       ballacc.current = [0, 0];
     }
+    
+    // calculate collision between ball and player
+
     const vectoracc =
       k *
       ballcharge *
