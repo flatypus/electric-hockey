@@ -1,9 +1,13 @@
 import Head from "next/head";
+import { useRouter } from "next/router";
 import React, { useEffect, useState } from "react";
 import Canvas from "../components/canvas";
+import Spinner from "../components/spinner";
 
 function Home() {
   const [isMobile, setIsMobile] = useState(true);
+  const [ready, setReady] = useState(false);
+  const router = useRouter();
   useEffect(() => {
     // regex to detect if user is on phone or tablet
     let check = false;
@@ -21,6 +25,10 @@ function Home() {
     setIsMobile(check);
   }, []);
 
+  useEffect(() => {
+    if (router.query.id) setReady(true);
+  }, [router.query]);
+
   return (
     <>
       <Head>
@@ -33,7 +41,18 @@ function Home() {
         min-h-screen"
       >
         <div className="row-start-1 col-start-1 fixed">
-          <Canvas />
+          {ready ? (
+            <Canvas />
+          ) : (
+            <div className="w-[800px] h-[400px] grid place-items-center">
+              <Spinner></Spinner>
+            </div>
+          )}
+          <div className="grid place-items-center">
+            <p>Modeled after electrostatics physics</p>
+            <p>The ball is always a positive charge</p>
+            <p>Press space to change your own charge</p>
+          </div>
         </div>
       </div>
     </>

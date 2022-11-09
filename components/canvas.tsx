@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useMemo } from "react";
 import Socket from "socket.io-client";
+import Router from "next/router";
 
 export default function Canvas() {
   const socket = useMemo(() => Socket("http://localhost:5001"), []);
@@ -14,6 +15,7 @@ export default function Canvas() {
   const playercharge = useRef<number>(-64);
   const gameSize = [800, 600];
   const ran = useRef<boolean>(false);
+  const socketId = useRef<string>("");
 
   // draw a singular point, used as a particle. Essentially drawDot but with dx,dy = 0,0 ie. a 1x1 dot
   const drawPoint = (
@@ -45,13 +47,36 @@ export default function Canvas() {
     ctx.fillText(text, pos[0] - 9, pos[1] + 7);
   };
 
+  socket.on("connect", () => {
+    socketId.current = socket.id;
+    socket.emit("playerInRoom", [Router.query.id]);
+  });
+
+  socket.on("redraw", (data: any) => {
+    const ctx = canvasRef.current.getContext("2d");
+    ctx.clearRect(0, 0, gameSize[0], gameSize[1]);
+    const [playerData, ballposition] = data;
+    drawCircle(ctx, ballposition, 8, "#FFFFFF");
+    for (const player in playerData) {
+      const item = playerData[player];
+      if (item.mousepos && item.playercharge) {
+        drawCircle(
+          ctx,
+          item.mousepos,
+          16,
+          item.playercharge > 0 ? "#FF0000" : "#FFFF00",
+          item.playercharge > 0 ? "+" : "-"
+        );
+      }
+    }
+  });
+
   const animate = (time: any) => {
     const ctx = canvasRef.current.getContext("2d");
     const [sx, sy] = [
       canvasRef.current.clientWidth,
       canvasRef.current.clientHeight,
     ];
-    ctx.clearRect(0, 0, sx, sy);
     if (ballpos.current[0] && ballpos.current[1]) {
       drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
     }
@@ -59,39 +84,14 @@ export default function Canvas() {
       ballpos.current[0] &&
       ballpos.current[1] &&
       mousepos.current[0] &&
-      mousepos.current[1]
+      mousepos.current[1] &&
+      Router.query.id
     ) {
-      socket.emit(
-        "playerData",
-        [
-          ballpos.current,
-          ballvel.current,
-          ballacc.current,
-          playercharge.current,
-          mousepos.current,
-          gameSize,
-        ],
-        (res: any) => {
-          ballpos.current = res.ballpos;
-          ballvel.current = res.ballvel;
-          ballacc.current = res.ballacc;
-          mousepos.current = res.mousepos;
-        }
-      );
-
-      // console.log(ballpos.current);
-      if (previousTimeRef.current != undefined) {
-        // draw function
-        // console.log(mousepos.current);
-        drawCircle(
-          ctx,
-          mousepos.current,
-          16,
-          playercharge.current > 0 ? "#FF0000" : "#FFFF00",
-          playercharge.current > 0 ? "+" : "-"
-        );
-        drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
-      }
+      socket.emit("updatePlayerData", [
+        Router.query.id,
+        mousepos.current,
+        playercharge.current,
+      ]);
     }
     previousTimeRef.current = time;
     requestRef.current = requestAnimationFrame(animate);
@@ -116,11 +116,13 @@ export default function Canvas() {
     // function to handle when mouse moves
     const handleWindowMouseMove = (event: any) => {
       const canvas = canvasRef.current;
-      var rect = canvas.getBoundingClientRect();
-      mousepos.current = [
-        (canvas.width * (event.clientX - rect.left)) / rect.width,
-        (canvas.height * (event.clientY - rect.top)) / rect.height,
-      ];
+      try {
+        var rect = canvas.getBoundingClientRect();
+        mousepos.current = [
+          (canvas.width * (event.clientX - rect.left)) / rect.width,
+          (canvas.height * (event.clientY - rect.top)) / rect.height,
+        ];
+      } catch {}
     };
     try {
       // initial grid load
@@ -131,11 +133,9 @@ export default function Canvas() {
     const handleClick = (e: any) => {
       // console.log(e)
       if (e.code && e.code == "Space") {
-        socket.emit("player", { charge: playercharge.current * -1 });
         playercharge.current = -playercharge.current;
       }
     };
-    console.log("hello");
     if (!ran.current) {
       ran.current = true;
       window.addEventListener("keypress", handleClick);
@@ -146,10 +146,6 @@ export default function Canvas() {
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current);
   }, []); // Make sure the effect runs only once
-
-  useEffect(() => {
-    console.log(socket.id)
-  }, []);
 
   return (
     <canvas
