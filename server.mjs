@@ -51,18 +51,17 @@ const calculatePhysics = (ballpos, ballvel, ballacc, playerData, gameSize) => {
   }
 
   if (ballpos[0] == NaN || ballpos[1] == NaN) {
-    ballpos = [400, 300];
-    ballvel = [0, 0];
-    ballacc = [0, 0];
+    ballpos[0] = 100000;
+    ballpos[1] = 100000;
   }
   // calculate collision between ball and player
   ballacc = [0, 0];
   for (const player in playerData) {
-    if (player.mousepos && player.playercharge) {
+    if (playerData[player] && playerData[player].playercharge) {
       const playeracc = acceleration(
         ballpos,
-        player.mousepos,
-        player.playercharge
+        playerData[player].mousepos,
+        playerData[player].playercharge
       );
       ballacc[0] += playeracc[0];
       ballacc[1] += playeracc[1];
@@ -91,19 +90,17 @@ function socket({ io }) {
         allData[roomId].players[socket.id].mousepos = mousepos;
         allData[roomId].players[socket.id].playercharge = playercharge;
       }
+      const ballpos = calculatePhysics(
+        allData[roomId].ballpos,
+        allData[roomId].ballvel,
+        allData[roomId].ballacc,
+        allData[roomId].players,
+        allData[roomId].gameSize
+      );
       for (const player in allData[roomId].players) {
         let element = allData[roomId].players[player];
         if (element.mousepos && element.playercharge) {
-          io.to(player).emit("redraw", [
-            allData[roomId].players,
-            calculatePhysics(
-              allData[roomId].ballpos,
-              allData[roomId].ballvel,
-              allData[roomId].ballacc,
-              allData[roomId].players,
-              allData[roomId].gameSize
-            ),
-          ]);
+          io.to(player).emit("redraw", [allData[roomId].players, ballpos]);
         }
       }
     });

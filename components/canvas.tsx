@@ -77,9 +77,6 @@ export default function Canvas() {
       canvasRef.current.clientWidth,
       canvasRef.current.clientHeight,
     ];
-    if (ballpos.current[0] && ballpos.current[1]) {
-      drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
-    }
     if (
       ballpos.current[0] &&
       ballpos.current[1] &&
@@ -108,7 +105,6 @@ export default function Canvas() {
     ];
     // clear the canvas
     ctx.clearRect(0, 0, sx, sy);
-    drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
     console.log("grid rerendered");
   };
 
