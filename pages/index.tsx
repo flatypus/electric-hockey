@@ -7,7 +7,7 @@ function Home() {
   const [joinCode, setJoinCode] = useState("");
   return (
     <div className="w-full h-full grid place-items-center">
-      <div className="flex flex-row gap-x-4">
+      <div className="flex flex-row gap-x-4 m-20">
         <input
           placeholder="Enter Join Code"
           onChange={(e) => setJoinCode(e.target.value)}
