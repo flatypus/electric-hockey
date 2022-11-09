@@ -1,6 +1,8 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo } from "react";
+import Socket from "socket.io-client";
 
 export default function Canvas() {
+  const socket = useMemo(() => Socket("http://localhost:5001"), []);
   // game will be played on a 800 x 600 canvas
   const requestRef: any = useRef();
   const canvasRef: any = useRef();
@@ -9,10 +11,7 @@ export default function Canvas() {
   const ballpos = useRef<any>([400, 300]);
   const ballacc = useRef<any>([0, 0]);
   const ballvel = useRef<any>([0, 0]);
-  const k = 1000;
-  const ballmass = 0.5;
-  const ballcharge = 2;
-  const playercharge = useRef<number>(-4);
+  const playercharge = useRef<number>(-64);
   const gameSize = [800, 600];
   const ran = useRef<boolean>(false);
 
@@ -46,58 +45,6 @@ export default function Canvas() {
     ctx.fillText(text, pos[0] - 9, pos[1] + 7);
   };
 
-  const calculatePhysics = (dt: number) => {
-    if (ballpos.current[0] > gameSize[0]) {
-      ballpos.current[0] -= 5;
-      ballvel.current[0] = -0.9 * Math.abs(ballvel.current[0]);
-    }
-    if (ballpos.current[0] < 0) {
-      ballpos.current[0] += 5;
-      ballvel.current[0] = 0.9 * Math.abs(ballvel.current[0]);
-    }
-
-    if (ballpos.current[1] > gameSize[1]) {
-      ballpos.current[1] -= 5;
-      ballvel.current[1] = -0.9 * Math.abs(ballvel.current[1]);
-    }
-    if (ballpos.current[1] < 0) {
-      ballpos.current[1] += 5;
-      ballvel.current[1] = 0.9 * Math.abs(ballvel.current[1]);
-    }
-
-    if (ballpos.current[0] == NaN || ballpos.current[1] == NaN) {
-      ballpos.current = [400, 300];
-      ballvel.current = [0, 0];
-      ballacc.current = [0, 0];
-    }
-    
-    // calculate collision between ball and player
-
-    const vectoracc =
-      k *
-      ballcharge *
-      playercharge.current *
-      (1 /
-        Math.sqrt(
-          (ballpos.current[0] - mousepos.current[0]) ** 2 +
-            (ballpos.current[1] - mousepos.current[1]) ** 2
-        )) *
-      (1 / ballmass);
-    const [x, y, z] = [
-      ballpos.current[0] - mousepos.current[0],
-      ballpos.current[1] - mousepos.current[1],
-      Math.sqrt(
-        (ballpos.current[0] - mousepos.current[0]) ** 2 +
-          (ballpos.current[1] - mousepos.current[1]) ** 2
-      ),
-    ];
-    ballacc.current = [vectoracc * (x / z), vectoracc * (y / z)];
-    ballvel.current[0] += ballacc.current[0] * dt;
-    ballvel.current[1] += ballacc.current[1] * dt;
-    ballpos.current[0] += ballvel.current[0] * dt;
-    ballpos.current[1] += ballvel.current[1] * dt;
-  };
-
   const animate = (time: any) => {
     const ctx = canvasRef.current.getContext("2d");
     const [sx, sy] = [
@@ -105,13 +52,33 @@ export default function Canvas() {
       canvasRef.current.clientHeight,
     ];
     ctx.clearRect(0, 0, sx, sy);
+    if (ballpos.current[0] && ballpos.current[1]) {
+      drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
+    }
     if (
       ballpos.current[0] &&
       ballpos.current[1] &&
       mousepos.current[0] &&
       mousepos.current[1]
     ) {
-      calculatePhysics(0.01);
+      socket.emit(
+        "playerData",
+        [
+          ballpos.current,
+          ballvel.current,
+          ballacc.current,
+          playercharge.current,
+          mousepos.current,
+          gameSize,
+        ],
+        (res: any) => {
+          ballpos.current = res.ballpos;
+          ballvel.current = res.ballvel;
+          ballacc.current = res.ballacc;
+          mousepos.current = res.mousepos;
+        }
+      );
+
       // console.log(ballpos.current);
       if (previousTimeRef.current != undefined) {
         // draw function
@@ -141,6 +108,7 @@ export default function Canvas() {
     ];
     // clear the canvas
     ctx.clearRect(0, 0, sx, sy);
+    drawCircle(ctx, ballpos.current, 8, "#FFFFFF");
     console.log("grid rerendered");
   };
 
@@ -163,7 +131,7 @@ export default function Canvas() {
     const handleClick = (e: any) => {
       // console.log(e)
       if (e.code && e.code == "Space") {
-        console.log(playercharge.current);
+        socket.emit("player", { charge: playercharge.current * -1 });
         playercharge.current = -playercharge.current;
       }
     };
@@ -178,6 +146,10 @@ export default function Canvas() {
     requestRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(requestRef.current);
   }, []); // Make sure the effect runs only once
+
+  useEffect(() => {
+    console.log(socket.id)
+  }, []);
 
   return (
     <canvas
