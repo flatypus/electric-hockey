@@ -30,8 +30,14 @@ const acceleration = (ballpos, mousepos, playercharge) => {
   return [vectoracc * (x / z), vectoracc * (y / z)];
 };
 
-const calculatePhysics = (ballpos, ballvel, ballacc, playerData, gameSize) => {
-  const dt = 0.01;
+const calculatePhysics = (
+  dt,
+  ballpos,
+  ballvel,
+  ballacc,
+  playerData,
+  gameSize
+) => {
   if (ballpos[0] > gameSize[0]) {
     ballpos[0] -= 5;
     ballvel[0] = -0.9 * Math.abs(ballvel[0]);
@@ -74,6 +80,20 @@ const calculatePhysics = (ballpos, ballvel, ballacc, playerData, gameSize) => {
   return ballpos;
 };
 
+const removeUselessData = (roomid) => {
+  for (const player in allData[roomid].players) {
+    if (
+      !(
+        allData[roomid].players[player].mousepos &&
+        allData[roomid].players[player].playercharge
+      )
+    ) {
+      delete allData[roomid].players[player];
+    }
+  }
+  console.log(`${Object.keys(allData[roomid].players).length} players in room ${roomid}`);
+};
+
 function socket({ io }) {
   console.log("starting server");
   io.on("connection", (socket) => {
@@ -90,7 +110,9 @@ function socket({ io }) {
         allData[roomId].players[socket.id].mousepos = mousepos;
         allData[roomId].players[socket.id].playercharge = playercharge;
       }
+      // removeUselessData(roomId);
       const ballpos = calculatePhysics(
+        0.01 / Object.keys(allData[roomId].players).length,
         allData[roomId].ballpos,
         allData[roomId].ballvel,
         allData[roomId].ballacc,
@@ -119,6 +141,7 @@ function socket({ io }) {
       }
       allData[roomId].players[socket.id] = {};
       playerRoomMap[socket.id] = roomId;
+      removeUselessData(roomId);
       // console.log(allData, playerRoomMap);
     });
 
@@ -127,6 +150,7 @@ function socket({ io }) {
       // remove player from allData
       const room = playerRoomMap[socket.id];
       delete allData[room].players[socket.id];
+      removeUselessData(room);
     });
   });
 }

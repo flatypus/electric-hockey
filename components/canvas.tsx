@@ -3,7 +3,7 @@ import Socket from "socket.io-client";
 import Router from "next/router";
 
 export default function Canvas() {
-  const socket = useMemo(() => Socket("http://localhost:5001"), []);
+  const socket = useMemo(() => Socket("https://electrosocket.flatypus.me"), []);
   // game will be played on a 800 x 600 canvas
   const requestRef: any = useRef();
   const canvasRef: any = useRef();
