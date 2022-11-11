@@ -9,7 +9,7 @@ function Home() {
     <div className="w-full h-full grid place-items-center">
       <div className="flex flex-row gap-x-4 m-20">
         <input
-          placeholder="Enter Join Code"
+          placeholder="Enter Join Code (or make one up to create a new room)"
           onChange={(e) => setJoinCode(e.target.value)}
           className="outline-none p-2 rounded-full"
         ></input>
